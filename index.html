@@ -1035,12 +1035,14 @@ function printInvoice(orderId, isReprint) {
       .tbl-head .col-price{flex:0.8;text-align:right;padding-right:4px}
       .tbl-head .col-qty{flex:0.4;text-align:center}
       .tbl-head .col-govt{flex:0.7;text-align:right;padding-right:4px;font-size:9px}
+      .tbl-head .col-vat{flex:0.7;text-align:right;padding-right:4px;font-size:9px}
       .tbl-head .col-total{flex:0.9;text-align:right;padding-right:4px}
       .tbl-row{display:flex;padding:3px 2px;border-bottom:1px dotted #ccc;font-size:10px;align-items:flex-start}
       .tbl-row .col-item{flex:1.5;text-align:left;padding-left:4px}
       .tbl-row .col-price{flex:0.8;text-align:right;padding-right:4px}
       .tbl-row .col-qty{flex:0.4;text-align:center}
       .tbl-row .col-govt{flex:0.7;text-align:right;padding-right:4px;color:#a00;font-weight:600}
+      .tbl-row .col-vat{flex:0.7;text-align:right;padding-right:4px;color:#0066cc;font-weight:600}
       .tbl-row .col-total{flex:0.9;text-align:right;padding-right:4px;font-weight:600}
       .badge{display:inline-block;padding:0 4px;font-size:8px;border:1px solid #000;border-radius:2px;margin-left:2px}
       .total-row{font-size:13px;font-weight:bold;padding:6px 0;border-top:2px solid #000;margin-top:4px}
@@ -1075,35 +1077,67 @@ function printInvoice(orderId, isReprint) {
     <div class="meta-row"><span class="label">${ar.invoiceNo} :</span><span class="val">${praSent ? pra.invoiceNumber : (praQueued ? '— (queued)' : '— (pending)')}</span></div>
     <div class="meta-row"><span class="label">${ar.cashier} :</span><span class="val">${o.staffName || seller.businessName}</span></div>
     <div class="meta-row"><span class="label">${ar.dateTime} :</span><span class="val">${invoiceDate}</span></div>
-    <div class="meta-row"><span class="label">Order Type / نوع الطلب :</span><span class="val">${o.tableLabel || 'TAKEAWAY'}</span></div>
+    <!-- Order Type line removed -->
 
     <div class="tbl-head">
       <div class="col-item">${ar.item} · ITEM</div>
       <div class="col-price">${ar.price} · PRICE</div>
       <div class="col-qty">${ar.qty}</div>
-      <div class="col-govt">GOVT · رسم</div>
+      <div class="col-vat">VAT · ضريبة</div>
       <div class="col-total">${ar.total}</div>
     </div>`;
 
   o.items.forEach(i => {
-    const itemGovtFee = getCartItemGovtFee(i);
+    const itemVAT = Math.round((i.price * i.qty - (i.price * i.qty) / (1 + getCartItemTaxRate(i))) * 100) / 100;
     html += `<div class="tbl-row">
       <div class="col-item">${i.name}${i.variantLabel?` <span class="badge">${i.variantLabel}</span>`:""}</div>
       <div class="col-price">${(i.price).toFixed(2)}</div>
       <div class="col-qty">${i.qty}</div>
-      <div class="col-govt">${itemGovtFee > 0 ? itemGovtFee.toFixed(2) : '—'}</div>
+      <div class="col-vat">${itemVAT > 0 ? itemVAT.toFixed(2) : '—'}</div>
       <div class="col-total">${(i.price*i.qty).toFixed(2)}</div>
     </div>`;
   });
 
+  // ===== Totals in a bordered box (Saudi tax invoice style — matches reference invoice) =====
   html += `<div class="line-strong"></div>`;
-  html += `<div class="item"><span class="name">${ar.totalTaxable}</span><span class="amt">SAR ${(o.subtotal||0).toFixed(2)}</span></div>`;
-  if (o.discount && o.discount > 0) html += `<div class="item"><span class="name">Discount / خصم</span><span class="amt">-SAR ${(o.discount||0).toFixed(2)}</span></div>`;
-  if (o.fee && o.fee > 0) html += `<div class="item"><span class="name">Service Fee / رسم خدمة</span><span class="amt">SAR ${(o.fee||0).toFixed(2)}</span></div>`;
-  if (o.tip && o.tip > 0) html += `<div class="item"><span class="name">Tip / إكرامية</span><span class="amt">SAR ${(o.tip||0).toFixed(2)}</span></div>`;
-  html += `<div class="item"><span class="name">VAT/Tax (${Math.round(state.taxRate*100)}%) / ضريبة</span><span class="amt">SAR ${(o.tax||0).toFixed(2)}</span></div>`;
-  html += `<div class="item"><span class="name">Govt Fee / رسم حكومي</span><span class="amt">SAR ${(o.govtFee||0).toFixed(2)}</span></div>`;
-  html += `<div class="total-row item"><span>${ar.totalDue}</span><span class="amt">SAR ${(o.total||0).toFixed(2)}</span></div>`;
+  html += `<table class="totals-box" style="width:100%;border-collapse:collapse;border:2px solid #000;margin-top:4px;font-size:11px">`;
+  // Row 1: Subtotal 100% — المجموع الفرعي 100% غير خاضع للضريبة
+  html += `<tr style="border-bottom:1px solid #000">
+    <td style="padding:5px 8px;text-align:right;font-weight:700">المجموع الفرعي 100% غير خاضع للضريبة / Subtotal 100%</td>
+    <td style="padding:5px 8px;text-align:right;width:40%;font-weight:700">SAR ${(o.subtotal||0).toFixed(2)}</td>
+  </tr>`;
+  // Discount row (if any)
+  if (o.discount && o.discount > 0) html += `<tr style="border-bottom:1px solid #ccc">
+    <td style="padding:3px 8px;text-align:right">Discount / خصم</td>
+    <td style="padding:3px 8px;text-align:right">-SAR ${(o.discount||0).toFixed(2)}</td>
+  </tr>`;
+  // Service Fee row (if any)
+  if (o.fee && o.fee > 0) html += `<tr style="border-bottom:1px solid #ccc">
+    <td style="padding:3px 8px;text-align:right">Service Fee / رسم خدمة</td>
+    <td style="padding:3px 8px;text-align:right">SAR ${(o.fee||0).toFixed(2)}</td>
+  </tr>`;
+  // Row 2: VAT — ضريبة القيمة المضافة 15% (extracted from inclusive price)
+  const effectiveVatRate = o.items && o.items.length > 0
+    ? Math.max(...o.items.map(i => {
+        const catRate = state.categoryTaxRates && state.categoryTaxRates[i.categoryId];
+        return (catRate !== undefined && catRate !== null && catRate >= 0) ? catRate : (state.taxRate || 0);
+      })) * 100
+    : Math.round(state.taxRate*100);
+  html += `<tr style="border-bottom:1px solid #000;background:#f5f5f5">
+    <td style="padding:5px 8px;text-align:right;font-weight:700">ضريبة القيمة المضافة ${Math.round(effectiveVatRate)}% / VAT (included)</td>
+    <td style="padding:5px 8px;text-align:right;font-weight:700">SAR ${(o.tax||0).toFixed(2)}</td>
+  </tr>`;
+  // Govt Fee row (always shown if govt fee > 0)
+  if (o.govtFee && o.govtFee > 0) html += `<tr style="border-bottom:1px solid #000;background:#f5f5f5">
+    <td style="padding:5px 8px;text-align:right;font-weight:700">رسم حكومي / Govt Fee</td>
+    <td style="padding:5px 8px;text-align:right;font-weight:700">SAR ${(o.govtFee||0).toFixed(2)}</td>
+  </tr>`;
+  // Row 3: Total inclusive of tax — شامل الضريبة
+  html += `<tr style="background:#000;color:#fff">
+    <td style="padding:7px 8px;text-align:right;font-size:13px;font-weight:bold">شامل الضريبة / Total Inclusive of Tax</td>
+    <td style="padding:7px 8px;text-align:right;font-size:15px;font-weight:bold">SAR ${(o.total||0).toFixed(2)}</td>
+  </tr>`;
+  html += `</table>`;
 
   if (o.status === "paid") {
     html += `<div class="line"></div>`;
@@ -1231,16 +1265,23 @@ function getCartItemGovtFee(item) {
   return 0;
 }
 function computeTotals() {
+  // Item prices are VAT-INCLUSIVE (VAT is already included in the price)
   const sub = state.cart.items.reduce((s,i)=>s+i.price*i.qty,0);
   const discAmt = getDiscountAmount(state.cart.discount, state.cart.discountType, sub);
   const isDineIn = state.cart.tableLabel && state.cart.tableLabel !== "TAKEAWAY";
   const autoServiceFee = (isDineIn && state.dineInServiceFee > 0) ? Math.round(sub * state.dineInServiceFee) : 0;
   const totalFee = autoServiceFee + state.cart.fee;
-  // Per-item VAT: sum of (lineTotal * categoryVATrate) for each item
-  const tax = state.cart.items.reduce((s,i)=>s+Math.round(i.price*i.qty*getCartItemTaxRate(i)),0);
-  // Per-item Govt Fee (applied AFTER VAT, per category config)
+  // VAT is INCLUDED in prices — extract it: VAT = subtotal - (subtotal / (1 + rate))
+  const tax = state.cart.items.reduce((s,i)=>{
+    const lineTotal = i.price * i.qty;
+    const rate = getCartItemTaxRate(i);
+    const vatIncluded = Math.round((lineTotal - lineTotal / (1 + rate)) * 100) / 100;
+    return s + vatIncluded;
+  }, 0);
+  // Govt fee still applies (per category config)
   const govtFee = state.cart.items.reduce((s,i)=>s+getCartItemGovtFee(i),0);
-  const total = Math.max(0, sub - discAmt + totalFee + state.cart.tip + tax + govtFee);
+  // Total = subtotal (VAT already included) + fees + govt fee - discount
+  const total = Math.max(0, sub - discAmt + totalFee + state.cart.tip + govtFee);
   return { subtotal: sub, discount: discAmt, serviceFee: autoServiceFee, totalFee, tax, govtFee, total };
 }
 function setView(v) { state.view = v; saveState(); render(); }
@@ -1277,30 +1318,36 @@ function sendToKitchen() {
   const isDineIn = state.cart.tableLabel && state.cart.tableLabel !== "TAKEAWAY";
   const autoServiceFee = (isDineIn && state.dineInServiceFee > 0) ? Math.round(sub * state.dineInServiceFee) : 0;
   const totalFee = autoServiceFee + state.cart.fee;
-  // Per-item VAT: sum of (lineTotal * categoryVATrate) for each item
-  const tax = state.cart.items.reduce((s,i)=>s+Math.round(i.price*i.qty*getCartItemTaxRate(i)),0);
-  // Per-item Govt Fee (applied AFTER VAT, per category config)
+  // VAT is INCLUDED in prices — extract it
+  const tax = state.cart.items.reduce((s,i)=>{
+    const lineTotal = i.price * i.qty;
+    const rate = getCartItemTaxRate(i);
+    const vatIncluded = Math.round((lineTotal - lineTotal / (1 + rate)) * 100) / 100;
+    return s + vatIncluded;
+  }, 0);
   const govtFee = state.cart.items.reduce((s,i)=>s+getCartItemGovtFee(i),0);
-  const total = Math.max(0, sub - discountAmt + totalFee + state.cart.tip + tax + govtFee);
+  const total = Math.max(0, sub - discountAmt + totalFee + state.cart.tip + govtFee);
   const token = state.tokenCounter;
   const number = `FB-${new Date().toISOString().slice(0,10).replace(/-/g,"")}-${String(token).padStart(3,"0")}`;
-  const order = { id: "o-"+Date.now()+"-"+Math.floor(Math.random()*1000), number, token, createdAt: Date.now(), status: "preparing",
-    items: state.cart.items.map(i=>({...i,status:"preparing",kitchenId:i.kitchenId||"main",kitchenName:i.kitchenName||"Main Kitchen"})), customerName: state.cart.customerName || "Walk-in", tableLabel: state.cart.tableLabel,
+  // Order goes directly to "served" status — no kitchen approval needed.
+  // Order Taker handles everything: punch → send to kitchen (auto-served) → pay
+  const order = { id: "o-"+Date.now()+"-"+Math.floor(Math.random()*1000), number, token, createdAt: Date.now(), status: "served",
+    items: state.cart.items.map(i=>({...i,status:"served",kitchenId:i.kitchenId||"main",kitchenName:i.kitchenName||"Main Kitchen"})), customerName: state.cart.customerName || "Walk-in", tableLabel: state.cart.tableLabel,
     subtotal: sub, discount: discountAmt, discountType: state.cart.discountType, fee: totalFee, serviceFee: autoServiceFee, serviceFeeRate: state.dineInServiceFee, tip: state.cart.tip, tax, govtFee, total, paid: 0, staffName: "Owner" };
   state.orders.unshift(order); state.tokenCounter = token + 1;
-  // TAKEAWAY and DINING are unlimited — never lock them.
-  // (No t.status = "occupied" assignment — these stay "free" forever.)
   const dt = state.cart.discountType || "amount";
   state.cart = { items: [], customerName: "Walk-in", tableLabel: null, discount: 0, discountType: dt, fee: 0, tip: 0, note: "" };
   saveState();
   if (state.soundOn) { try { const ctx=new(window.AudioContext||window.webkitAudioContext)(); const o=ctx.createOscillator(); const g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=660; o.type="sine"; g.gain.setValueAtTime(0.05,ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.25); o.start(); o.stop(ctx.currentTime+0.25); } catch(e){} }
-  alert(`Sent to kitchen!\n${number} · Token ${token} · ${fmtMoney(total)}`);
+  // Auto-print kitchen ticket (sends to kitchen printer)
+  try { printKitchenTicket(order.id, "all"); } catch(e) { console.warn("Kitchen print failed:", e); }
+  alert(`Order sent!\n${number} · Token ${token} · ${fmtMoney(total)}\n\nKitchen ticket printed.\nClick "Pay" to collect payment.`);
   render();
 }
 
 function markItemReady(oid, pid, vid) { const o=state.orders.find(o=>o.id===oid); if(!o)return; const i=o.items.find(i=>i.productId===pid&&(i.variantId||null)===(vid||null)); if(i)i.status="ready"; saveState();render(); }
 function markOrderReady(oid) { const o=state.orders.find(o=>o.id===oid); if(o){o.status="ready";saveState();render();} }
-function markServed(oid) { const o=state.orders.find(o=>o.id===oid); if(o){o.status="served";saveState();alert(`Order #${o.token} sent to Cashier for payment.`);render();} }
+function markServed(oid) { const o=state.orders.find(o=>o.id===oid); if(o){o.status="served";saveState();render();} }
 function payOrder(oid, method, amount) {
   const o = state.orders.find(o => o.id === oid);
   if (!o) return;
@@ -1381,14 +1428,19 @@ function addNoteToOrder(oid, note) {
 
 function recalcOrderTotals(o) {
   const sub = o.items.reduce((s, i) => s + i.price * i.qty, 0);
-  const tax = o.items.reduce((s,i)=>s+Math.round(i.price*i.qty*getCartItemTaxRate(i)),0);
+  // VAT is INCLUDED in prices — extract it
+  const tax = o.items.reduce((s,i)=>{
+    const lineTotal = i.price * i.qty;
+    const rate = getCartItemTaxRate(i);
+    return s + Math.round((lineTotal - lineTotal / (1 + rate)) * 100) / 100;
+  },0);
   const govtFee = o.items.reduce((s,i)=>s+getCartItemGovtFee(i),0);
   o.subtotal = sub;
   o.tax = tax;
   o.govtFee = govtFee;
   const discAmt = (o.discountType === "percent") ? Math.round(sub * (o.discount || 0) / 100) : (o.discount || 0);
   o.discount = discAmt;
-  o.total = Math.max(0, sub - discAmt + (o.fee || 0) + (o.tip || 0) + tax + govtFee);
+  o.total = Math.max(0, sub - discAmt + (o.fee || 0) + (o.tip || 0) + govtFee);
 }
 
 function addProductToOrder(oid) {
@@ -1527,7 +1579,7 @@ function initMenuSalesExpenses() {
 }
 
 const NAV = [
-  {key:"pos",label:"Order Taker",icon:"🧑"},{key:"kitchen",label:"Kitchen",icon:"👨‍🍳"},{key:"cashier",label:"Cashier",icon:"💳"},
+  {key:"pos",label:"Order Taker",icon:"🧑"},
   {key:"dashboard",label:"Dashboard",icon:"🖥"},{key:"orders",label:"Orders",icon:"📄"},{key:"products",label:"Products",icon:"📦"},
   {key:"categories",label:"Categories",icon:"🗂"},{key:"customers",label:"Customers",icon:"👤"},{key:"tables",label:"Tables",icon:"🪑"},
   {key:"expenses",label:"Expenses",icon:"📉"},{key:"reports",label:"Reports",icon:"📊"},{key:"pra",label:"PRA e-IMS",icon:"🧾"},{key:"settings",label:"Settings",icon:"⚙"},
@@ -1629,8 +1681,8 @@ function renderTopNav() {
 function renderView() {
   switch(state.view) {
     case "pos": return renderPos();
-    case "kitchen": return renderKitchen();
-    case "cashier": return renderCashier();
+    case "kitchen": return renderPos();  // Kitchen merged into Order Taker
+    case "cashier": return renderPos();  // Cashier merged into Order Taker
     case "dashboard": return renderDashboard();
     case "orders": return renderOrders();
     case "products": return renderProducts();
@@ -1646,6 +1698,38 @@ function renderView() {
 }
 
 // ============ POS VIEW ============
+let quickPayOrderId = null;
+let quickPayMethod = "cash";
+let quickPayTendered = "";
+
+function quickPayOrder(oid) {
+  quickPayOrderId = oid;
+  quickPayMethod = "cash";
+  quickPayTendered = "";
+  render();
+}
+
+function closeQuickPay() {
+  quickPayOrderId = null;
+  quickPayTendered = "";
+  render();
+}
+
+function completeQuickPay() {
+  if (!quickPayOrderId) return;
+  const o = state.orders.find(x => x.id === quickPayOrderId);
+  if (!o) { quickPayOrderId = null; render(); return; }
+  if (quickPayMethod === "cash" && Number(quickPayTendered || 0) < o.total) {
+    alert("Insufficient cash — please enter at least " + fmtMoney(o.total));
+    return;
+  }
+  const amount = quickPayMethod === "cash" ? Number(quickPayTendered || 0) : o.total;
+  const oid = quickPayOrderId;
+  quickPayOrderId = null;
+  quickPayTendered = "";
+  payOrder(oid, quickPayMethod, amount);
+}
+
 function renderPos() {
   const filtered = PRODUCTS.filter(p => {
     if (activeCategory !== "all" && p.categoryId !== activeCategory) return false;
@@ -1655,7 +1739,87 @@ function renderPos() {
   const totals = computeTotals();
   let mobileCartHtml = "";
   const cartCount = state.cart.items.reduce((s,i)=>s+i.qty,0);
-  let html = `<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-7.5rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
+  // Pending orders waiting for payment (served status)
+  const pendingPayments = state.orders.filter(o => o.status === "served").sort((a,b) => a.createdAt - b.createdAt);
+  const quickPayOrder = quickPayOrderId ? state.orders.find(o => o.id === quickPayOrderId) : null;
+  const quickPayChange = quickPayOrder ? Math.max(0, Number(quickPayTendered || 0) - quickPayOrder.total) : 0;
+  const quickPayInsufficient = quickPayMethod === "cash" && quickPayOrder && Number(quickPayTendered || 0) < quickPayOrder.total;
+
+  let pendingHtml = "";
+  if (pendingPayments.length > 0) {
+    pendingHtml = `<div style="padding:8px 12px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent)">
+      <div class="flex items-center gap-2 mb-2">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--amber-300)">⏳ Pending Payments (${pendingPayments.length})</span>
+        <span style="font-size:10px;color:var(--muted-foreground)">· click Pay to collect payment</span>
+      </div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px" class="no-scrollbar">
+        ${pendingPayments.map(o => `
+          <div style="flex-shrink:0;min-width:160px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer" onclick="quickPayOrder('${o.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:12px;font-weight:700">#${o.token}</span>
+              <span style="font-size:10px;color:var(--muted-foreground)">${o.items.length} items</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${o.items.length} items · ${fmtMoney(o.total)}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:14px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
+              <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--amber-500);color:var(--amber-950);font-weight:600">💳 Pay</span>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>`;
+  }
+
+  // Quick Pay dialog (overlay)
+  let quickPayHtml = "";
+  if (quickPayOrder) {
+    quickPayHtml = `<div class="dialog-overlay" onclick="if(event.target===this)closeQuickPay()">
+      <div class="dialog-box" style="max-width:24rem" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold">💳 Quick Pay — #${quickPayOrder.token}</h3>
+          <button onclick="closeQuickPay()" class="text-xl leading-none" style="color:var(--muted-foreground)">&times;</button>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px">
+          <div style="font-size:11px;color:var(--muted-foreground);margin-bottom:4px">${quickPayOrder.number}</div>
+          <div style="font-size:11px;color:var(--muted-foreground);margin-bottom:6px">${quickPayOrder.items.length} items</div>
+          <div style="font-size:10px;color:var(--muted-foreground)">Subtotal: ${fmtMoney(quickPayOrder.subtotal)} · VAT: ${fmtMoney(quickPayOrder.tax||0)}${quickPayOrder.govtFee ? ' · Govt Fee: ' + fmtMoney(quickPayOrder.govtFee) : ''}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <span style="font-size:12px;font-weight:600">Total Due</span>
+            <span style="font-size:20px;font-weight:700;color:var(--amber-300)">${fmtMoney(quickPayOrder.total)}</span>
+          </div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:600;margin-bottom:6px">Payment Method</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+            ${["cash","card","wallet","credit"].map(m => `<button onclick="quickPayMethod='${m}';render()" style="padding:8px 4px;border-radius:6px;border:1px solid ${quickPayMethod===m?'color-mix(in srgb,var(--amber-500) 60%,transparent)':'color-mix(in srgb,var(--border) 40%,transparent)'};background:${quickPayMethod===m?'color-mix(in srgb,var(--amber-500) 15%,transparent)':'var(--card)'};color:${quickPayMethod===m?'var(--amber-300)':'var(--muted-foreground)'};font-size:11px;font-weight:600;text-align:center;cursor:pointer">${m==='cash'?'💵 Cash':m==='card'?'💳 Card':m==='wallet'?'📱 Wallet':'📝 Credit'}</button>`).join("")}
+          </div>
+        </div>
+        ${quickPayMethod === "cash" ? `
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;font-weight:600;margin-bottom:6px">Amount Tendered</div>
+            <input type="number" value="${quickPayTendered}" oninput="quickPayTendered=this.value;render();this.focus()" placeholder="0.00" style="width:100%;padding:8px 10px;border-radius:6px;background:var(--input);color:var(--foreground);border:1px solid color-mix(in srgb,var(--amber-500) 30%,transparent);font-size:16px;font-weight:700;outline:none" autofocus />
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px">
+              <button onclick="quickPayTendered='${quickPayOrder.total}';render()" style="padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:10px;cursor:pointer">${fmtMoney(quickPayOrder.total)}</button>
+              <button onclick="quickPayTendered='${Math.ceil(quickPayOrder.total/100)*100}';render()" style="padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:10px;cursor:pointer">${fmtMoney(Math.ceil(quickPayOrder.total/100)*100)}</button>
+              <button onclick="quickPayTendered='${Math.ceil(quickPayOrder.total/500)*500}';render()" style="padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:10px;cursor:pointer">${fmtMoney(Math.ceil(quickPayOrder.total/500)*500)}</button>
+              <button onclick="quickPayTendered='${Math.ceil(quickPayOrder.total/1000)*1000}';render()" style="padding:4px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:10px;cursor:pointer">${fmtMoney(Math.ceil(quickPayOrder.total/1000)*1000)}</button>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px;padding:6px 10px;border-radius:6px;background:var(--card);border:1px solid var(--border)">
+              <span style="font-size:11px;color:var(--muted-foreground)">Change Due</span>
+              <span style="font-size:14px;font-weight:700;color:#6ee7b7">${fmtMoney(quickPayChange)}</span>
+            </div>
+            ${quickPayInsufficient ? `<div style="font-size:10px;color:#fda4af;margin-top:4px">⚠ Insufficient — need at least ${fmtMoney(quickPayOrder.total)}</div>` : ""}
+          </div>
+        ` : ""}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <button onclick="previewInvoice('${quickPayOrder.id}')" style="padding:10px;border-radius:6px;border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);background:transparent;color:var(--amber-300);font-size:12px;font-weight:600;cursor:pointer">👁 Preview</button>
+          <button onclick="completeQuickPay()" ${quickPayInsufficient ? 'disabled' : ''} style="padding:10px;border-radius:6px;border:none;background:${quickPayInsufficient?'#374151':'#047857'};color:${quickPayInsufficient?'#9ca3af':'#ecfdf5'};font-size:12px;font-weight:700;cursor:${quickPayInsufficient?'not-allowed':'pointer'}">✓ Complete Payment</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  let html = `${getExpiryBannerHtml()}${pendingHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-7.5rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
     <section class="flex flex-col min-h-0 border-r" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="flex items-center gap-2 p-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <input type="search" placeholder="Search product…" value="${searchQuery}" oninput="searchQuery=this.value;render();document.querySelector('input[type=search]').focus()" class="flex-1 rounded-md px-3 py-2 text-sm outline-none" style="background:var(--input);border:1px solid color-mix(in srgb,var(--border) 60%,transparent);color:var(--foreground)"/>
@@ -1685,12 +1849,12 @@ function renderPos() {
     <section class="hidden lg:flex flex-col min-h-0" style="background:linear-gradient(to bottom,var(--surface-3),var(--surface-4))">
       <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <button onclick="clearCart()" class="text-sm hover:text-red-400" style="color:var(--muted-foreground)">✕ Clear</button>
-        <div class="text-center"><div class="text-sm font-semibold"># Token ${String(state.tokenCounter).padStart(3,"0")}</div><div class="text-[11px]" style="color:var(--muted-foreground)">${state.cart.tableLabel?"Table: "+state.cart.tableLabel:"No table selected"}</div></div>
+        <div class="text-center"><div class="text-sm font-semibold"># Token ${String(state.tokenCounter).padStart(3,"0")}</div><div class="text-[11px]" style="color:var(--muted-foreground)">New Order</div></div>
         <button onclick="holdCart()" class="text-sm hover:text-amber-300" style="color:var(--muted-foreground)">⏸ Hold</button>
       </div>
       <div class="grid grid-cols-2 gap-2 px-3 py-2 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <select onchange="state.cart.customerName=this.value;saveState()" class="h-9 text-xs rounded px-2" style="background:var(--input);color:var(--foreground)">${CUSTOMERS.map(c=>`<option ${state.cart.customerName===c.name?"selected":""}>${c.name}</option>`).join("")}</select>
-        <div class="h-9 flex items-center px-2 text-xs rounded" style="background:var(--input);color:${state.cart.tableLabel?'var(--amber-300)':'var(--muted-foreground)'}">${state.cart.tableLabel?"Table: "+state.cart.tableLabel:"Select table via product"}</div>
+        
       </div>
       <div class="flex-1 overflow-y-auto px-3 py-2">
         ${state.cart.items.length===0?`<div class="flex flex-col items-center justify-center h-full" style="color:var(--muted-foreground)"><div class="text-4xl opacity-30">☕</div><div class="text-sm mt-2">Cart is empty</div><div class="text-xs mt-1">Click a product to start</div></div>`:
@@ -1839,7 +2003,7 @@ ${IS_MOBILE ? `
             <button onclick="pickerProduct=null;render()" class="text-xl" style="color:var(--muted-foreground)">✕</button>
           </div>
           ${p.description?`<p class="text-xs mb-3" style="color:var(--muted-foreground)">${p.description}</p>`:""}
-          <div class="text-xs uppercase tracking-wide font-semibold mb-2" style="color:var(--muted-foreground)">Variation · Table: ${state.cart.tableLabel||"TAKEAWAY"}</div>
+          <div class="text-xs uppercase tracking-wide font-semibold mb-2" style="color:var(--muted-foreground)">Variation · Select Size</div>
           <div class="space-y-2 mb-4">
             ${p.variants.map((v,i)=>`<label class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 cursor-pointer" style="${i===0?'border-color:color-mix(in srgb,var(--amber-500) 60%,transparent);background:color-mix(in srgb,var(--amber-500) 10%,transparent)':'border-color:color-mix(in srgb,var(--border) 60%,transparent)'}">
               <div class="flex items-center gap-3"><input type="radio" name="variant" value="${v.id}" ${i===0?"checked":""}/><span class="font-medium">${v.label}</span></div>
@@ -1859,9 +2023,7 @@ let selectedTable = null;
 function handleProductClick(pid) {
   const p = PRODUCTS.find(x => x.id === pid);
   if (!p) return;
-  // Direct punch — skip TAKEAWAY/DINING picker entirely.
-  // Default order type is TAKEAWAY (set on first item if not already set).
-  if (!state.cart.tableLabel) state.cart.tableLabel = "TAKEAWAY";
+  // Direct punch — no order type set. Orders are just "orders" now.
   // If product has variants (sizes), show variant picker; else add directly.
   if (p.variants && p.variants.length > 0) {
     pickerProduct = pid;
@@ -4066,7 +4228,7 @@ function previewCurrentCart() {
     createdAt: Date.now(),
     items: state.cart.items.map(i => ({...i})),
     customerName: state.cart.customerName || 'Walk-in',
-    tableLabel: state.cart.tableLabel || 'TAKEAWAY',
+    tableLabel: state.cart.tableLabel || '',
     subtotal: totals.subtotal,
     discount: totals.discount,
     discountType: state.cart.discountType,
@@ -4152,7 +4314,7 @@ function printCurrentCart() {
 // Keyboard shortcuts F1-F12
 document.addEventListener("keydown", (e) => {
   if (e.target.matches("input, textarea, select")) return;
-  const map = {F1:"pos",F2:"kitchen",F3:"cashier",F4:"dashboard",F5:"orders",F6:"products",F7:"categories",F8:"customers",F9:"tables",F10:"expenses",F11:"reports",F12:"settings"};
+  const map = {F1:"pos",F2:"dashboard",F3:"orders",F4:"products",F5:"categories",F6:"customers",F7:"tables",F8:"expenses",F9:"reports",F10:"settings",F11:"pra",F12:"settings"};
   if (map[e.key]) { e.preventDefault(); setView(map[e.key]); }
 });
 
