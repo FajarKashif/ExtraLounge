@@ -793,6 +793,9 @@ const defaultState = {
     "cat-shisha": { type: 'flat', value: 2 },  // SAR 2 per shisha
   },
   dineInServiceFee: 0,
+  // Software expiry date (ISO string YYYY-MM-DD). When set, Cashier view shows
+  // "X days remaining" banner. Default: 30 days from first install.
+  softwareExpiry: new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0,10),
   soundOn: true,
   theme: "espresso",
   view: "pos",
@@ -940,34 +943,7 @@ function previewInvoice(orderId) {
   } catch(e) { console.warn('previewInvoice error:', e); }
   window.open = origOpen;
   if (!capturedHtml) { alert('Could not generate invoice preview.'); return; }
-  const cleanHtml = capturedHtml.replace(/<script>window.onload=function(){window.print\(\);}<\/script>/, '');
-  const w = window.open('', '_blank', 'width=400,height=800');
-  if (!w) { alert('Please allow pop-ups to preview the invoice.'); return; }
-  w.document.write(cleanHtml);
-  w.document.close();
-}
-
-// ============ INVOICE PREVIEW (opens in new tab, no auto-print) ============
-function previewInvoice(orderId) {
-  const o = state.orders.find(x => x.id === orderId);
-  if (!o) { alert('Order not found.'); return; }
-  let capturedHtml = null;
-  const origOpen = window.open;
-  window.open = function() {
-    return {
-      document: {
-        write: function(html) { capturedHtml = html; },
-        close: function() {},
-      },
-      print: function() {},
-    };
-  };
-  try {
-    printInvoice(orderId, true);
-  } catch(e) { console.warn('previewInvoice error:', e); }
-  window.open = origOpen;
-  if (!capturedHtml) { alert('Could not generate invoice preview.'); return; }
-  const cleanHtml = capturedHtml.replace(/<script>window.onload=function(){window.print\(\);}<\/script>/, '');
+  const cleanHtml = capturedHtml.replace(/<script>window.onload=function\(\){window\.print\(\);}<\/script>/, '');
   const w = window.open('', '_blank', 'width=400,height=800');
   if (!w) { alert('Please allow pop-ups to preview the invoice.'); return; }
   w.document.write(cleanHtml);
@@ -1750,7 +1726,10 @@ function renderPos() {
         ${state.cart.fee>0?`<div class="flex justify-between text-xs"><span style="color:var(--muted-foreground)">Extra Fee</span><span class="tabular-nums">${fmtMoney(state.cart.fee)}</span></div>`:""}
         <div class="flex justify-between text-xs"><span style="color:var(--muted-foreground)">Tax (${Math.round(state.taxRate*100)}%)</span><span class="tabular-nums">${fmtMoney(totals.tax)}</span></div>
         <div class="flex justify-between pt-2 border-t" style="border-color:color-mix(in srgb,var(--border) 60%,transparent)"><span class="text-sm font-medium">Total</span><span class="text-lg font-bold tabular-nums" style="color:var(--amber-300)">${fmtMoney(totals.total)}</span></div>
-        <button onclick="sendToKitchen()" class="w-full font-semibold rounded-md py-2.5" style="background:var(--amber-500);color:var(--amber-950)">➤ Send Kitchen</button>
+        <div class="flex gap-2">
+          <button onclick="previewCurrentCart()" class="flex-1 font-semibold rounded-md py-2.5" style="background:transparent;color:var(--amber-300);border:1px solid color-mix(in srgb,var(--amber-500) 50%,transparent)" title="Preview invoice of current cart">👁 Preview</button>
+          <button onclick="sendToKitchen()" class="flex-[2] font-semibold rounded-md py-2.5" style="background:var(--amber-500);color:var(--amber-950)">➤ Send Kitchen</button>
+        </div>
       </div>
     </section>
 ${IS_MOBILE ? `
@@ -1804,9 +1783,10 @@ ${IS_MOBILE ? `
               <div class="flex justify-between"><span style="color:var(--muted-foreground)">Tax</span><span class="tabular-nums">${fmtMoney(totals.tax)}</span></div>
               <div class="flex justify-between pt-1.5 border-t" style="border-color:var(--border)"><span class="text-sm font-semibold">Total</span><span class="text-base font-bold tabular-nums" style="color:var(--amber-300)">${fmtMoney(totals.total)}</span></div>
             </div>
-            <div class="flex gap-2 pt-1">
-              <button onclick="holdCart()" class="flex-1 border rounded-lg py-2.5 text-xs font-medium" style="border-color:var(--border);color:var(--muted-foreground)">⏸ Hold</button>
-              <button onclick="sendToKitchen()" class="flex-[2] font-semibold rounded-lg py-2.5 text-sm" style="background:var(--amber-500);color:var(--amber-950)">➤ Send Kitchen</button>
+            <div class="grid grid-cols-3 gap-1 pt-1">
+              <button onclick="holdCart()" class="border rounded-lg py-2.5 text-xs font-medium" style="border-color:var(--border);color:var(--muted-foreground)">⏸ Hold</button>
+              <button onclick="previewCurrentCart()" class="border rounded-lg py-2.5 text-xs font-medium" style="border-color:color-mix(in srgb,var(--amber-500) 40%,transparent);color:var(--amber-300);background:color-mix(in srgb,var(--amber-500) 5%,transparent)">👁 Preview</button>
+              <button onclick="sendToKitchen()" class="font-semibold rounded-lg py-2.5 text-sm" style="background:var(--amber-500);color:var(--amber-950)">➤ Send Kitchen</button>
             </div>
           `:""}
         </div>
@@ -2074,7 +2054,7 @@ function renderCashier() {
 
   const tabBtn = (key, label, count, icon) => `<button onclick="cashierQueueTab='${key}';cashierSelectedId=null;cashierTendered='';render()" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all" style="${isPaidTab=== (key==='paid')?'background:var(--amber-500);color:var(--amber-950)':'background:transparent;color:var(--muted-foreground)'}">${icon} ${label} <span class="text-[10px] px-1.5 py-0 rounded-full" style="${isPaidTab=== (key==='paid')?'background:color-mix(in srgb,var(--amber-950) 15%,transparent)':'background:color-mix(in srgb,var(--border) 60%,transparent)'}">${count}</span></button>`;
 
-  return `<div class="cashier-layout h-[calc(100vh-7.5rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
+  return `${getExpiryBannerHtml()}<div class="cashier-layout h-[calc(100vh-7.5rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
     <aside class="border-r flex flex-col min-h-0 max-h-[35vh] lg:max-h-full overflow-y-auto" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="px-3 py-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <div class="flex items-center gap-1 p-1 rounded-lg" style="background:color-mix(in srgb,var(--border) 30%,transparent)">
@@ -3325,6 +3305,74 @@ function renderReports() {
   </div>`;
 }
 
+// ============ SOFTWARE EXPIRY ============
+function saveSoftwareExpiry() {
+  const input = document.getElementById('softwareExpiryInput');
+  if (!input || !input.value) { alert('Please select a date.'); return; }
+  state.softwareExpiry = input.value;
+  saveState();
+  render();
+  alert('Software expiry set to: ' + input.value + '\n\nThe Cashier view will now show the remaining days banner.');
+}
+
+function getExpiryDaysRemaining() {
+  if (!state.softwareExpiry) return null;
+  const expiry = new Date(state.softwareExpiry + 'T23:59:59');
+  const now = new Date();
+  const ms = expiry.getTime() - now.getTime();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+function getExpiryStatusHtml() {
+  const days = getExpiryDaysRemaining();
+  if (days === null) return 'No expiry set. <a href="#" onclick="setView(\'settings\')">Set in Settings</a>';
+  if (days < 0) return '⚠ <strong style="color:#ef4444">EXPIRED ' + Math.abs(days) + ' days ago</strong>. Please renew the license.';
+  if (days === 0) return '⚠ <strong style="color:#ef4444">Expires TODAY</strong>. Renew immediately.';
+  if (days <= 7) return '⚠ <strong style="color:#f59e0b">' + days + ' days remaining</strong>. Renew soon.';
+  if (days <= 30) return '⏳ <strong style="color:#f59e0b">' + days + ' days remaining</strong>.';
+  return '✓ <strong style="color:#10b981">' + days + ' days remaining</strong>. License active.';
+}
+
+function getExpiryBannerHtml() {
+  const days = getExpiryDaysRemaining();
+  if (days === null) return '';
+  let bg, color, text, icon;
+  if (days < 0) {
+    bg = 'color-mix(in srgb,#ef4444 15%,transparent)';
+    color = '#fca5a5';
+    icon = '⛔';
+    text = 'SOFTWARE EXPIRED · ' + Math.abs(days) + ' days ago — Please contact admin to renew the license';
+  } else if (days === 0) {
+    bg = 'color-mix(in srgb,#ef4444 15%,transparent)';
+    color = '#fca5a5';
+    icon = '⚠';
+    text = 'SOFTWARE EXPIRES TODAY — Renew immediately';
+  } else if (days <= 7) {
+    bg = 'color-mix(in srgb,#ef4444 15%,transparent)';
+    color = '#fca5a5';
+    icon = '⚠';
+    text = 'ONLY ' + days + ' DAYS REMAINING — Renew soon!';
+  } else if (days <= 30) {
+    bg = 'color-mix(in srgb,#f59e0b 12%,transparent)';
+    color = '#fbbf24';
+    icon = '⏳';
+    text = days + ' days remaining';
+  } else {
+    bg = 'color-mix(in srgb,#10b981 10%,transparent)';
+    color = '#6ee7b7';
+    icon = '✓';
+    text = days + ' days remaining';
+  }
+  // Always show: Expiry Date + Days Remaining (no Settings button on Cashier page)
+  return `<div class="expiry-banner" style="background:${bg};color:${color};border:1px solid color-mix(in srgb,${color} 40%,transparent);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;text-align:center;margin-bottom:12px;display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:18px">${icon}</span>
+    <div style="text-align:center">
+      <div style="font-size:13px;font-weight:700">${text}</div>
+      <div style="font-size:11px;font-weight:500;opacity:0.85;margin-top:2px">📅 Expiry Date: ${state.softwareExpiry}${days >= 0 ? ' · ' + days + ' day' + (days === 1 ? '' : 's') + ' left' : ' · Expired ' + Math.abs(days) + ' day' + (Math.abs(days) === 1 ? '' : 's') + ' ago'}</div>
+    </div>
+  </div>`;
+}
+
 // ============ SETTINGS ============
 function saveInvoiceSettings() {
   const feeEl = document.getElementById("invServiceFee");
@@ -3490,6 +3538,16 @@ function renderSettings() {
             <div class="flex -space-x-1">${t.swatch.map(c=>`<span class="h-5 w-5 rounded-full border" style="background:${c};border-color:color-mix(in srgb,var(--border) 60%,transparent)"></span>`).join("")}</div>
             <div class="text-xs font-medium">${t.name}</div><div class="text-[10px]" style="color:var(--muted-foreground)">${t.description}</div></button>`).join("")}
         </div>
+      </div>
+      <div class="surface rounded-xl p-5 space-y-3" style="border:1px solid color-mix(in srgb,#3b82f6 30%,transparent)">
+        <div class="flex items-center gap-2"><span class="text-lg">📅</span><h3 class="text-sm font-semibold">Software Expiry / مدة الصلاحية</h3></div>
+        <p class="text-[11px]" style="color:var(--muted-foreground)">Set the expiry date for this POS installation. The Cashier view will show a "days remaining" banner at the top.</p>
+        <div class="flex items-center gap-2">
+          <input type="date" id="softwareExpiryInput" value="${state.softwareExpiry || ''}" class="flex-1 rounded-lg px-3 py-2.5 text-sm font-semibold outline-none" style="background:var(--input);color:#93c5fd;border:1px solid color-mix(in srgb,#3b82f6 30%,transparent)" />
+          <button onclick="saveSoftwareExpiry()" class="font-semibold rounded-lg px-4 py-2.5 text-sm" style="background:var(--amber-500);color:var(--amber-950)">💾 Save</button>
+        </div>
+        <div id="expiryStatus" class="text-[11px] mt-1 p-2 rounded" style="background:color-mix(in srgb,#3b82f6 5%,transparent);color:var(--muted-foreground)">${getExpiryStatusHtml()}</div>
+        <div class="text-[10px]" style="color:var(--muted-foreground)">Tip: Set a far future date (e.g., 2099-12-31) to disable the warning. Set a past date to test the expired state.</div>
       </div>
       <div class="surface rounded-xl p-5">
         <h3 class="text-sm font-semibold mb-3">Data Management</h3>
@@ -3995,6 +4053,56 @@ function deleteCategory(categoryId) {
   if (idx === -1) return;
   CATEGORIES.splice(idx, 1);
   saveState(); render();
+}
+
+function previewCurrentCart() {
+  if (state.cart.items.length === 0) { alert('Cart is empty. Add items first.'); return; }
+  // Build a temporary order object from cart and preview as invoice
+  const totals = computeTotals();
+  const tempOrder = {
+    id: 'preview-' + Date.now(),
+    number: 'PREVIEW-' + new Date().toISOString().slice(0,10).replace(/-/g,''),
+    token: '—',
+    createdAt: Date.now(),
+    items: state.cart.items.map(i => ({...i})),
+    customerName: state.cart.customerName || 'Walk-in',
+    tableLabel: state.cart.tableLabel || 'TAKEAWAY',
+    subtotal: totals.subtotal,
+    discount: totals.discount,
+    discountType: state.cart.discountType,
+    fee: totals.totalFee,
+    serviceFee: totals.serviceFee,
+    tip: state.cart.tip,
+    tax: totals.tax,
+    govtFee: totals.govtFee || 0,
+    total: totals.total,
+    paid: 0,
+    status: 'preview',
+    staffName: 'Owner',
+  };
+  // Insert temp order at top of orders, preview it, then remove
+  state.orders.unshift(tempOrder);
+  let capturedHtml = null;
+  const origOpen = window.open;
+  window.open = function() {
+    return {
+      document: {
+        write: function(html) { capturedHtml = html; },
+        close: function() {},
+      },
+      print: function() {},
+    };
+  };
+  try { printInvoice(tempOrder.id, false); } catch(e) { console.warn(e); }
+  window.open = origOpen;
+  // Remove the temp order
+  state.orders.shift();
+  if (!capturedHtml) { alert('Could not generate preview.'); return; }
+  const cleanHtml = capturedHtml.replace(/<script>window.onload=function\(\){window\.print\(\);}<\/script>/, '');
+  const w = window.open('', '_blank', 'width=400,height=800');
+  if (!w) { alert('Please allow pop-ups to preview the invoice.'); return; }
+  w.document.write(cleanHtml);
+  w.document.close();
 }
 
 function printCurrentCart() {
