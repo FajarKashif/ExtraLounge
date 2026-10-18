@@ -1664,7 +1664,20 @@ let aoDialogCat = "all";
 
 
 const IS_MOBILE = window.innerWidth <= 768;
-window.addEventListener('resize', () => { location.reload(); });
+// Debounced resize — only reload if width actually changes significantly (not keyboard popup)
+let resizeTimeout;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    // Only reload if viewport WIDTH changed by more than 50px (orientation change)
+    // Ignore height changes (keyboard popup, address bar show/hide on mobile)
+    if (Math.abs(window.innerWidth - (window._lastWidth || 0)) > 50) {
+      window._lastWidth = window.innerWidth;
+      location.reload();
+    }
+  }, 300);
+});
+window._lastWidth = window.innerWidth;
 
 function render() {
   const mobileNav = IS_MOBILE ? renderMobileBottomNav() : '';
