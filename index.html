@@ -612,6 +612,46 @@
   /* ===== EXPENSES ADD FORM MOBILE ===== */
   .expense-add-row { flex-direction: column !important; }
   .expense-add-row input, .expense-add-row select { width: 100% !important; }
+
+  /* ===== NEW: EXPIRY BANNER MOBILE ===== */
+  .expiry-banner { padding: 8px 10px !important; font-size: 11px !important; flex-direction: column !important; gap: 4px !important; text-align: center !important; }
+  .expiry-banner span[style*="font-size:18px"] { font-size: 16px !important; }
+  .expiry-banner div[style*="font-size:13px"] { font-size: 12px !important; }
+  .expiry-banner div[style*="font-size:11px"] { font-size: 10px !important; }
+
+  /* ===== NEW: PENDING PAYMENTS STRIP MOBILE ===== */
+  .expiry-banner + div[style*="padding:8px 12px"] { padding: 6px 8px !important; }
+  .expiry-banner + div[style*="padding:8px 12px"] > div:last-child { overflow-x: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+
+  /* ===== NEW: QUICK PAY DIALOG MOBILE ===== */
+  .dialog-box[style*="max-width:24rem"] { max-width: 100% !important; width: 100% !important; }
+  .dialog-box[style*="max-width:24rem"] input[type="number"] { font-size: 18px !important; }
+  .dialog-box button[style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* ===== NEW: PRA E-IMS VIEW MOBILE ===== */
+  .pra-view { padding: 8px !important; }
+  .pra-toolbar { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
+  .pra-toggles { flex-wrap: wrap !important; justify-content: center !important; }
+  .pra-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
+  .pra-stat { padding: 8px 10px !important; }
+  .pra-stat-value { font-size: 16px !important; }
+  .pra-seller-card { padding: 8px !important; }
+  .pra-seller-card > div:last-child { grid-template-columns: 1fr !important; }
+  .pra-table { font-size: 10px !important; }
+  .pra-table th, .pra-table td { padding: 4px 6px !important; }
+  .pra-table th:nth-child(8), .pra-table td:nth-child(8), .pra-table th:nth-child(9), .pra-table td:nth-child(9) { display: none !important; }
+
+  /* ===== NEW: SELLER DETAILS MODAL MOBILE ===== */
+  .pra-modal-card { max-width: 100% !important; width: 100% !important; max-height: 95vh !important; }
+  .pra-form-grid { grid-template-columns: 1fr !important; }
+
+  /* ===== NEW: CATEGORY TAX SETTINGS MOBILE ===== */
+  .cat-tax-input, .cat-govt-type, .cat-govt-val { font-size: 12px !important; }
+  #catTaxGrid > div { padding: 6px 8px !important; }
+
+  /* ===== NEW: INVOICE PRINT — narrower columns on small print ===== */
+  .totals-box { font-size: 10px !important; }
+  .totals-box td { padding: 3px 4px !important; }
 }
 
 @media (min-width: 769px) {
