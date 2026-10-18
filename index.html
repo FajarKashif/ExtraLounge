@@ -516,8 +516,8 @@
     overflow-y: auto !important;
   }
   .mobile-cart-drawer {
-    position: fixed; bottom: 3.75rem; left: 0; right: 0; z-index: 40;
-    transform: translateY(calc(100% - 3.5rem));
+    position: fixed; bottom: 3.5rem; left: 0; right: 0; z-index: 40;
+    transform: translateY(calc(100% - 2.5rem));
     transition: transform 0.3s ease;
   }
   .mobile-cart-drawer.open { transform: translateY(0); }
@@ -582,7 +582,10 @@
   /* ===== CRITICAL: Fix ALL view heights for bottom nav ===== */
   main > div:not(.mobile-pos-wrap):not(.mobile-full-view):not(.expiry-banner) {
     min-height: auto !important;
-    height: auto !important;
+    height: calc(100vh - 9.75rem - 3.75rem) !important;
+    max-height: calc(100vh - 9.75rem - 3.75rem) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
   /* ===== SAFE AREA: Bottom padding for scrollable views ===== */
   main > div:not(.mobile-pos-wrap):not(.expiry-banner) {
@@ -643,7 +646,7 @@
   .dialog-box button[style*="grid-template-columns:repeat(4,1fr)"] { grid-template-columns: repeat(2, 1fr) !important; }
 
   /* ===== NEW: PRA E-IMS VIEW MOBILE ===== */
-  .pra-view { padding: 8px !important; }
+  .pra-view { padding: 8px !important; height: calc(100vh - 9.75rem - 3.75rem) !important; max-height: calc(100vh - 9.75rem - 3.75rem) !important; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
   .pra-toolbar { flex-direction: column !important; align-items: stretch !important; gap: 8px !important; }
   .pra-toggles { flex-wrap: wrap !important; justify-content: center !important; }
   .pra-stats { grid-template-columns: repeat(2, 1fr) !important; gap: 6px !important; }
@@ -674,7 +677,7 @@
 
 
 /* ===== PRA e-IMS VIEW ===== */
-.pra-view { padding: 16px; max-width: 1400px; margin: 0 auto; height: 100%; overflow-y: auto; }
+.pra-view { padding: 16px; max-width: 1400px; margin: 0 auto; height: calc(100vh - 9.75rem); overflow-y: auto; }
 .pra-toolbar {
   display: flex; justify-content: space-between; align-items: flex-start;
   gap: 16px; margin-bottom: 16px; flex-wrap: wrap;
@@ -1807,23 +1810,19 @@ function renderPos() {
 
   let pendingHtml = "";
   if (pendingPayments.length > 0) {
-    pendingHtml = `<div style="padding:8px 12px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent)">
-      <div class="flex items-center gap-2 mb-2">
-        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--amber-300)">⏳ Pending Payments (${pendingPayments.length})</span>
-        <span style="font-size:10px;color:var(--muted-foreground)">· click Pay to collect payment</span>
+    pendingHtml = `<div style="padding:4px 8px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+        <span style="font-size:10px;font-weight:700;color:var(--amber-300)">⏳ Pending (${pendingPayments.length})</span>
+        <span style="font-size:9px;color:var(--muted-foreground)">· click to pay</span>
       </div>
-      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px" class="no-scrollbar">
+      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px" class="no-scrollbar">
         ${pendingPayments.map(o => `
-          <div style="flex-shrink:0;min-width:160px;padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer" onclick="quickPayOrder('${o.id}')">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-              <span style="font-size:12px;font-weight:700">#${o.token}</span>
-              <span style="font-size:10px;color:var(--muted-foreground)">${o.items.length} items</span>
-            </div>
-            <div style="font-size:11px;color:var(--muted-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${o.items.length} items · ${fmtMoney(o.total)}</div>
+          <div style="flex-shrink:0;min-width:120px;padding:4px 8px;border-radius:6px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer" onclick="quickPayOrder('${o.id}')">
             <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:14px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
-              <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--amber-500);color:var(--amber-950);font-weight:600">💳 Pay</span>
+              <span style="font-size:11px;font-weight:700">#${o.token}</span>
+              <span style="font-size:13px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
             </div>
+            <div style="font-size:9px;color:var(--muted-foreground)">${o.items.length} items · 💳 Pay</div>
           </div>
         `).join("")}
       </div>
@@ -1879,8 +1878,7 @@ function renderPos() {
     </div>`;
   }
 
-  let html = `${getExpiryBannerHtml()}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid min-h-[calc(100vh-7.5rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
-    ${pendingHtml}
+  let html = `${getExpiryBannerHtml()}${pendingHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-9.75rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
     <section class="flex flex-col min-h-0 border-r" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="flex items-center gap-2 p-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <input type="search" placeholder="Search product…" value="${searchQuery}" oninput="searchQuery=this.value;render();document.querySelector('input[type=search]').focus()" class="flex-1 rounded-md px-3 py-2 text-sm outline-none" style="background:var(--input);border:1px solid color-mix(in srgb,var(--border) 60%,transparent);color:var(--foreground)"/>
@@ -2277,7 +2275,7 @@ function renderCashier() {
 
   const tabBtn = (key, label, count, icon) => `<button onclick="cashierQueueTab='${key}';cashierSelectedId=null;cashierTendered='';render()" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all" style="${isPaidTab=== (key==='paid')?'background:var(--amber-500);color:var(--amber-950)':'background:transparent;color:var(--muted-foreground)'}">${icon} ${label} <span class="text-[10px] px-1.5 py-0 rounded-full" style="${isPaidTab=== (key==='paid')?'background:color-mix(in srgb,var(--amber-950) 15%,transparent)':'background:color-mix(in srgb,var(--border) 60%,transparent)'}">${count}</span></button>`;
 
-  return `${getExpiryBannerHtml()}<div class="cashier-layout min-h-[calc(100vh-7.5rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
+  return `${getExpiryBannerHtml()}<div class="cashier-layout h-[calc(100vh-9.75rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
     <aside class="border-r flex flex-col min-h-0 max-h-[35vh] lg:max-h-full overflow-y-auto" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="px-3 py-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <div class="flex items-center gap-1 p-1 rounded-lg" style="background:color-mix(in srgb,var(--border) 30%,transparent)">
@@ -2536,7 +2534,7 @@ function renderDashboard() {
   orders.forEach(o => o.items.forEach(i => { const c = CATEGORIES.find(c => c.id === i.categoryId); const catName = c ? c.name : "Other"; if(!catBreakdown[catName]) catBreakdown[catName]={qty:0,revenue:0}; catBreakdown[catName].qty+=i.qty; catBreakdown[catName].revenue+=i.price*i.qty; }));
   const topCats = Object.entries(catBreakdown).sort((a,b)=>b[1].revenue-a[1].revenue);
 
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4 space-y-4">
     <!-- Period Tabs -->
     <div class="flex items-center justify-between flex-wrap gap-3">
       <h2 class="text-base font-semibold">Dashboard Activity</h2>
@@ -2693,7 +2691,7 @@ function renderDashboard() {
 
 // ============ ORDERS (no Take Payment button) ============
 function renderOrders() {
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <h2 class="text-base font-semibold mb-3">Orders (${state.orders.length})</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 orders-grid">
       ${state.orders.map(o => {
@@ -2722,7 +2720,7 @@ function renderOrders() {
 function renderProducts() {
   const kitFilter = activeKitchenFilter;
   const filtered = kitFilter === "all" ? PRODUCTS : PRODUCTS.filter(p => { const cat = CATEGORIES.find(c=>c.id===p.categoryId); return (cat && cat.kitchenId) === kitFilter; });
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <h2 class="text-base font-semibold">Products (${PRODUCTS.length})</h2>
       <div class="flex items-center gap-2 flex-wrap">
@@ -2763,7 +2761,7 @@ function renderProducts() {
 
 // ============ CATEGORIES ============
 function renderCategories() {
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-base font-semibold">Categories & Kitchen/Printer (${CATEGORIES.length})</h2>
       <button onclick="showAddCategoryForm=true;render()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:brightness-110" style="background:var(--amber-500);color:var(--amber-950)"><span class="text-base">+</span> Add Category</button>
@@ -2843,7 +2841,7 @@ function updateCategoryKitchen(categoryId, kitchenId) {
 // ============ CUSTOMERS ============
 function renderCustomers() {
   const creditOrders = state.orders.filter(o => o.paymentMethod === "credit" && o.status === "paid");
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <h2 class="text-base font-semibold mb-3">Customers (${CUSTOMERS.length})</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       ${CUSTOMERS.map(c=>{
@@ -2952,7 +2950,7 @@ function renderTables() {
   const grouped = {};
   filtered.forEach(t => { const fid = t.floor || "ground"; if(!grouped[fid]) grouped[fid]=[]; grouped[fid].push(t); });
 
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4 space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <h2 class="text-base font-semibold">Tables (${TABLES.length})</h2>
       <div class="flex items-center gap-2">
@@ -3114,7 +3112,7 @@ function deleteFloor(fid) {
 // ============ EXPENSES ============
 function renderExpenses() {
   const total = state.expenses.reduce((s,e)=>s+e.amount,0);
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <div class="flex justify-between items-center mb-3"><h2 class="text-base font-semibold">Expenses</h2><span class="text-sm font-semibold" style="color:#fda4af">Total: ${fmtMoney(total)}</span></div>
     <div class="surface rounded-xl overflow-x-auto"><div class="min-w-[480px]"><table class="w-full text-sm">
         <thead class="text-xs uppercase" style="background:color-mix(in srgb,var(--card) 40%,transparent);color:var(--muted-foreground)"><tr><th class="text-left px-4 py-3">Date</th><th class="text-left px-4 py-3">Category</th><th class="text-left px-4 py-3">Description</th><th class="text-right px-4 py-3">Amount</th></tr></thead>
@@ -3519,7 +3517,7 @@ function renderReports() {
     </div>`;
   }
 
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4 reports-view">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4 space-y-4 reports-view">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <h2 class="text-base font-semibold">\ud83d\udcca Reports</h2>
       ${tabsBar}
@@ -3659,7 +3657,7 @@ function clearCategoryTaxRates() {
 }
 
 function renderSettings() {
-  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="h-[calc(100vh-9.75rem)] overflow-y-auto p-4">
     <div class="max-w-2xl mx-auto space-y-4">
       <h2 class="text-base font-semibold">⚙ Settings</h2>
       <div class="surface rounded-xl p-5 space-y-4">
