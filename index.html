@@ -566,7 +566,8 @@
   }
   /* ===== CRITICAL: Fix ALL view heights for bottom nav ===== */
   main > div:not(.mobile-pos-wrap):not(.mobile-full-view):not(.expiry-banner) {
-    height: calc(100vh - 7.5rem - 3.75rem) !important;
+    min-height: auto !important;
+    height: auto !important;
   }
   /* ===== SAFE AREA: Bottom padding for scrollable views ===== */
   main > div:not(.mobile-pos-wrap):not(.expiry-banner) {
@@ -1857,7 +1858,7 @@ function renderPos() {
     </div>`;
   }
 
-  let html = `${getExpiryBannerHtml()}${pendingHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-7.5rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
+  let html = `${getExpiryBannerHtml()}${pendingHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid min-h-[calc(100vh-7.5rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
     <section class="flex flex-col min-h-0 border-r" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="flex items-center gap-2 p-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <input type="search" placeholder="Search product…" value="${searchQuery}" oninput="searchQuery=this.value;render();document.querySelector('input[type=search]').focus()" class="flex-1 rounded-md px-3 py-2 text-sm outline-none" style="background:var(--input);border:1px solid color-mix(in srgb,var(--border) 60%,transparent);color:var(--foreground)"/>
@@ -2254,7 +2255,7 @@ function renderCashier() {
 
   const tabBtn = (key, label, count, icon) => `<button onclick="cashierQueueTab='${key}';cashierSelectedId=null;cashierTendered='';render()" class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-semibold transition-all" style="${isPaidTab=== (key==='paid')?'background:var(--amber-500);color:var(--amber-950)':'background:transparent;color:var(--muted-foreground)'}">${icon} ${label} <span class="text-[10px] px-1.5 py-0 rounded-full" style="${isPaidTab=== (key==='paid')?'background:color-mix(in srgb,var(--amber-950) 15%,transparent)':'background:color-mix(in srgb,var(--border) 60%,transparent)'}">${count}</span></button>`;
 
-  return `${getExpiryBannerHtml()}<div class="cashier-layout h-[calc(100vh-7.5rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
+  return `${getExpiryBannerHtml()}<div class="cashier-layout min-h-[calc(100vh-7.5rem)] grid grid-cols-1 lg:grid-cols-[20rem_minmax(0,1fr)]">
     <aside class="border-r flex flex-col min-h-0 max-h-[35vh] lg:max-h-full overflow-y-auto" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="px-3 py-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <div class="flex items-center gap-1 p-1 rounded-lg" style="background:color-mix(in srgb,var(--border) 30%,transparent)">
@@ -2513,7 +2514,7 @@ function renderDashboard() {
   orders.forEach(o => o.items.forEach(i => { const c = CATEGORIES.find(c => c.id === i.categoryId); const catName = c ? c.name : "Other"; if(!catBreakdown[catName]) catBreakdown[catName]={qty:0,revenue:0}; catBreakdown[catName].qty+=i.qty; catBreakdown[catName].revenue+=i.price*i.qty; }));
   const topCats = Object.entries(catBreakdown).sort((a,b)=>b[1].revenue-a[1].revenue);
 
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
     <!-- Period Tabs -->
     <div class="flex items-center justify-between flex-wrap gap-3">
       <h2 class="text-base font-semibold">Dashboard Activity</h2>
@@ -2670,7 +2671,7 @@ function renderDashboard() {
 
 // ============ ORDERS (no Take Payment button) ============
 function renderOrders() {
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <h2 class="text-base font-semibold mb-3">Orders (${state.orders.length})</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 orders-grid">
       ${state.orders.map(o => {
@@ -2699,7 +2700,7 @@ function renderOrders() {
 function renderProducts() {
   const kitFilter = activeKitchenFilter;
   const filtered = kitFilter === "all" ? PRODUCTS : PRODUCTS.filter(p => { const cat = CATEGORIES.find(c=>c.id===p.categoryId); return (cat && cat.kitchenId) === kitFilter; });
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <h2 class="text-base font-semibold">Products (${PRODUCTS.length})</h2>
       <div class="flex items-center gap-2 flex-wrap">
@@ -2740,7 +2741,7 @@ function renderProducts() {
 
 // ============ CATEGORIES ============
 function renderCategories() {
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-base font-semibold">Categories & Kitchen/Printer (${CATEGORIES.length})</h2>
       <button onclick="showAddCategoryForm=true;render()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:brightness-110" style="background:var(--amber-500);color:var(--amber-950)"><span class="text-base">+</span> Add Category</button>
@@ -2820,7 +2821,7 @@ function updateCategoryKitchen(categoryId, kitchenId) {
 // ============ CUSTOMERS ============
 function renderCustomers() {
   const creditOrders = state.orders.filter(o => o.paymentMethod === "credit" && o.status === "paid");
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <h2 class="text-base font-semibold mb-3">Customers (${CUSTOMERS.length})</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       ${CUSTOMERS.map(c=>{
@@ -2929,7 +2930,7 @@ function renderTables() {
   const grouped = {};
   filtered.forEach(t => { const fid = t.floor || "ground"; if(!grouped[fid]) grouped[fid]=[]; grouped[fid].push(t); });
 
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <h2 class="text-base font-semibold">Tables (${TABLES.length})</h2>
       <div class="flex items-center gap-2">
@@ -3091,7 +3092,7 @@ function deleteFloor(fid) {
 // ============ EXPENSES ============
 function renderExpenses() {
   const total = state.expenses.reduce((s,e)=>s+e.amount,0);
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <div class="flex justify-between items-center mb-3"><h2 class="text-base font-semibold">Expenses</h2><span class="text-sm font-semibold" style="color:#fda4af">Total: ${fmtMoney(total)}</span></div>
     <div class="surface rounded-xl overflow-x-auto"><div class="min-w-[480px]"><table class="w-full text-sm">
         <thead class="text-xs uppercase" style="background:color-mix(in srgb,var(--card) 40%,transparent);color:var(--muted-foreground)"><tr><th class="text-left px-4 py-3">Date</th><th class="text-left px-4 py-3">Category</th><th class="text-left px-4 py-3">Description</th><th class="text-right px-4 py-3">Amount</th></tr></thead>
@@ -3496,7 +3497,7 @@ function renderReports() {
     </div>`;
   }
 
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4 reports-view">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 space-y-4 reports-view">
     <div class="flex items-center justify-between flex-wrap gap-2">
       <h2 class="text-base font-semibold">\ud83d\udcca Reports</h2>
       ${tabsBar}
@@ -3636,7 +3637,7 @@ function clearCategoryTaxRates() {
 }
 
 function renderSettings() {
-  return `<div class="h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
+  return `<div class="min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4">
     <div class="max-w-2xl mx-auto space-y-4">
       <h2 class="text-base font-semibold">⚙ Settings</h2>
       <div class="surface rounded-xl p-5 space-y-4">
