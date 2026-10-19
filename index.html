@@ -775,6 +775,13 @@
   .pra-toggles { width: 100%; }
 }
 </style>
+<!-- PWA Manifest (inline, embedded as data URI) -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Extra Lounge">
+<meta name="theme-color" content="#1a1410">
+<meta name="mobile-web-app-capable" content="yes">
 </head>
 <body class="min-h-screen" style="background: var(--background); color: var(--foreground);">
 <div id="app" class="min-h-screen flex flex-col"></div>
@@ -1350,6 +1357,34 @@ function computeTotals() {
 function setView(v) { state.view = v; saveState(); render(); }
 function setTheme(t) { state.theme = t; document.documentElement.dataset.theme = t; saveState(); render(); }
 
+// ============ DOWNLOAD MOBILE APP (PWA Install) ============
+function downloadMobileApp(e) {
+  if (e) e.preventDefault();
+  // Directly download the APK file
+  var link = document.createElement('a');
+  link.href = 'ExtraLounge-POS.apk';
+  link.download = 'ExtraLounge-POS.apk';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Show confirmation
+  setTimeout(function() {
+    alert('Extra Lounge APK downloading...');
+  }, 500);
+}
+
+// Capture PWA install prompt (kept for browsers that support it)
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  window.deferredPrompt = e;
+});
+
+window.addEventListener('appinstalled', function() {
+  window.deferredPrompt = null;
+  console.log('Extra Lounge app installed successfully');
+});
+
 function getProductKitchen(product) {
   const cat = CATEGORIES.find(c => c.id === product.categoryId);
   const kitId = (cat && cat.kitchenId) || "main";
@@ -1747,6 +1782,9 @@ function renderTopNav() {
       <div class="leading-tight"><div class="flex items-center gap-1.5"><span class="text-sm font-semibold tracking-tight">${state.businessName}</span><span class="text-[9px] px-1 py-0 rounded" style="border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);color:var(--amber-400)">POS</span></div>
       <div class="text-[10px] desktop-only" style="color:var(--muted-foreground)">${state.outletName} · Restaurant POS</div></div></div>
       <div class="flex items-center gap-1.5">
+        <a href="#" onclick="downloadMobileApp(event)" class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all hover:brightness-110" style="background:linear-gradient(135deg,#10b981,#059669);color:white;white-space:nowrap" title="Download as Mobile App">
+          📱 <span class="desktop-only">Download App</span>
+        </a>
         ${pc>0?`<span class="px-1.5 py-0.5 rounded-full text-[10px] mobile-only" style="border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);background:color-mix(in srgb,var(--amber-500) 10%,transparent);color:var(--amber-300)">${pc}</span><span class="px-2 py-0.5 rounded-full text-[10px] desktop-only" style="border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);background:color-mix(in srgb,var(--amber-500) 10%,transparent);color:var(--amber-300)">🔔 ${pc} preparing</span>`:""}
         ${rc>0?`<span class="px-1.5 py-0.5 rounded-full text-[10px] mobile-only" style="border:1px solid color-mix(in srgb,#10b981 40%,transparent);background:color-mix(in srgb,#10b981 10%,transparent);color:#6ee7b7">${rc}</span><span class="px-2 py-0.5 rounded-full text-[10px] desktop-only" style="border:1px solid color-mix(in srgb,#10b981 40%,transparent);background:color-mix(in srgb,#10b981 10%,transparent);color:#6ee7b7">${rc} ready</span>`:""}
         <button onclick="state.soundOn=!state.soundOn;saveState();render()" class="px-1.5 py-1 text-sm rounded" style="color:var(--muted-foreground)">${state.soundOn?"🔊":"🔇"}</button>
@@ -4391,6 +4429,10 @@ document.addEventListener("keydown", (e) => {
   if (map[e.key]) { e.preventDefault(); setView(map[e.key]); }
 });
 
+// Register service worker for offline use
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(function(e){});
+}
 
 // ============================================================
 // === PRA e-IMS INTEGRATION (in-browser, no backend) ==========
