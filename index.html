@@ -4432,6 +4432,114 @@ if ("serviceWorker" in navigator) {
 }
 
 // ============================================================
+// === CLOUD SYNC — App aur Website ke beech data sync ========
+// ============================================================
+const SYNC_CONFIG = {
+  syncUrl: '',
+  syncInterval: 30000,
+  deviceName: 'Device-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+  autoSyncEnabled: true,
+  lastSync: null,
+};
+
+function getSyncUrl() {
+  if (SYNC_CONFIG.syncUrl) return SYNC_CONFIG.syncUrl;
+  var origin = window.location.origin;
+  if (origin.includes('vercel.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+    return origin + '/api/sync';
+  }
+  return 'https://extra-lounge-pos.vercel.app/api/sync';
+}
+
+async function syncToCloud() {
+  try {
+    var dataToSync = {
+      orders: state.orders,
+      tokenCounter: state.tokenCounter,
+      businessName: state.businessName,
+      outletName: state.outletName,
+      currency: state.currency,
+      taxRate: state.taxRate,
+      categoryTaxRates: state.categoryTaxRates,
+      categoryGovtFee: state.categoryGovtFee,
+      softwareExpiry: state.softwareExpiry,
+      dineInServiceFee: state.dineInServiceFee,
+      expenses: state.expenses,
+      cart: state.cart,
+      heldCarts: state.heldCarts,
+      tables: state.tables,
+      theme: state.theme,
+      soundOn: state.soundOn,
+    };
+    var response = await fetch(getSyncUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: dataToSync, deviceName: SYNC_CONFIG.deviceName })
+    });
+    if (response.ok) {
+      SYNC_CONFIG.lastSync = new Date().toISOString();
+    }
+  } catch (e) {
+    console.warn('Cloud sync failed:', e.message);
+  }
+}
+
+async function syncFromCloud() {
+  try {
+    var response = await fetch(getSyncUrl(), { method: 'GET' });
+    if (!response.ok) return null;
+    var result = await response.json();
+    if (result.ok && result.data) return result;
+  } catch (e) {
+    console.warn('Cloud fetch failed:', e.message);
+  }
+  return null;
+}
+
+var _origSave = saveState;
+saveState = function() {
+  _origSave();
+  localStorage.setItem('kafopos_last_save', Date.now().toString());
+  if (SYNC_CONFIG.autoSyncEnabled) syncToCloud();
+};
+
+async function loadFromCloudOnStart() {
+  var cloudData = await syncFromCloud();
+  if (!cloudData || !cloudData.data) return;
+  var cloudTime = new Date(cloudData.lastUpdated).getTime();
+  var localTime = parseInt(localStorage.getItem('kafopos_last_save') || '0');
+  if (cloudTime > localTime) {
+    var cloud = cloudData.data;
+    if (cloud.orders) state.orders = cloud.orders;
+    if (cloud.tokenCounter) state.tokenCounter = cloud.tokenCounter;
+    if (cloud.businessName) state.businessName = cloud.businessName;
+    if (cloud.outletName) state.outletName = cloud.outletName;
+    if (cloud.currency) state.currency = cloud.currency;
+    if (cloud.taxRate !== undefined) state.taxRate = cloud.taxRate;
+    if (cloud.categoryTaxRates) state.categoryTaxRates = cloud.categoryTaxRates;
+    if (cloud.categoryGovtFee) state.categoryGovtFee = cloud.categoryGovtFee;
+    if (cloud.softwareExpiry) state.softwareExpiry = cloud.softwareExpiry;
+    if (cloud.dineInServiceFee !== undefined) state.dineInServiceFee = cloud.dineInServiceFee;
+    if (cloud.expenses) state.expenses = cloud.expenses;
+    if (cloud.cart) state.cart = cloud.cart;
+    if (cloud.heldCarts) state.heldCarts = cloud.heldCarts;
+    if (cloud.tables) state.tables = cloud.tables;
+    if (cloud.theme) { state.theme = cloud.theme; document.documentElement.dataset.theme = cloud.theme; }
+    if (cloud.soundOn !== undefined) state.soundOn = cloud.soundOn;
+    _origSave();
+    render();
+    console.log('Cloud data loaded');
+  }
+}
+
+setInterval(function() {
+  if (SYNC_CONFIG.autoSyncEnabled) syncToCloud();
+}, SYNC_CONFIG.syncInterval);
+
+setTimeout(loadFromCloudOnStart, 2000);
+
+
+// ============================================================
 // === PRA e-IMS INTEGRATION (in-browser, no backend) ==========
 // ============================================================
 // This entire integration runs in the browser. In a real deployment
