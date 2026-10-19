@@ -525,6 +525,10 @@
     width: 2.5rem; height: 0.25rem; border-radius: 9999px;
     background: var(--muted-foreground); margin: 0 auto 0.5rem;
   }
+  /* Add bottom padding to products so they're not hidden behind cart drawer */
+  .mobile-pos-wrap > section > div:last-child {
+    padding-bottom: 3rem !important;
+  }
   /* Product grid 2 cols on mobile */
   .mobile-pos-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 0.5rem !important; }
   .mobile-pos-grid button { font-size: 12px; }
@@ -580,15 +584,22 @@
     padding-bottom: 0 !important;
   }
   /* ===== CRITICAL: Fix ALL view heights for bottom nav ===== */
-  main > div:not(.mobile-pos-wrap):not(.mobile-full-view):not(.expiry-banner) {
+  main > div:not(.mobile-pos-wrap):not(.mobile-full-view):not(.expiry-banner):not(.pending-strip) {
     min-height: auto !important;
     height: calc(100vh - 9.75rem - 3.75rem) !important;
     max-height: calc(100vh - 9.75rem - 3.75rem) !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
+  /* Pending payments strip — compact, no height constraint */
+  .pending-strip {
+    height: auto !important;
+    max-height: 40px !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+  }
   /* ===== SAFE AREA: Bottom padding for scrollable views ===== */
-  main > div:not(.mobile-pos-wrap):not(.expiry-banner) {
+  main > div:not(.mobile-pos-wrap):not(.expiry-banner):not(.pending-strip) {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
   }
   /* ===== iOS INPUT ZOOM PREVENTION ===== */
@@ -1853,19 +1864,13 @@ function renderPos() {
 
   let pendingHtml = "";
   if (pendingPayments.length > 0) {
-    pendingHtml = `<div style="padding:4px 8px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent);flex-shrink:0">
-      <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-        <span style="font-size:10px;font-weight:700;color:var(--amber-300)">⏳ Pending (${pendingPayments.length})</span>
-        <span style="font-size:9px;color:var(--muted-foreground)">· click to pay</span>
-      </div>
-      <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px" class="no-scrollbar">
+    pendingHtml = `<div class="pending-strip" style="padding:3px 8px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent);flex-shrink:0;line-height:1">
+      <div style="display:flex;gap:4px;overflow-x:auto;padding:2px 0" class="no-scrollbar">
         ${pendingPayments.map(o => `
-          <div style="flex-shrink:0;min-width:120px;padding:4px 8px;border-radius:6px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer" onclick="quickPayOrder('${o.id}')">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span style="font-size:11px;font-weight:700">#${o.token}</span>
-              <span style="font-size:13px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
-            </div>
-            <div style="font-size:9px;color:var(--muted-foreground)">${o.items.length} items · 💳 Pay</div>
+          <div style="flex-shrink:0;padding:2px 8px;border-radius:4px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap" onclick="quickPayOrder('${o.id}')">
+            <span style="font-size:10px;font-weight:700">#${o.token}</span>
+            <span style="font-size:10px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
+            <span style="font-size:9px;color:var(--amber-500)">💳</span>
           </div>
         `).join("")}
       </div>
