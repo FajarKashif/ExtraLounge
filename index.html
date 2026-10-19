@@ -1360,18 +1360,10 @@ function setTheme(t) { state.theme = t; document.documentElement.dataset.theme =
 // ============ DOWNLOAD MOBILE APP (PWA Install) ============
 function downloadMobileApp(e) {
   if (e) e.preventDefault();
-  // Directly download the APK file
-  var link = document.createElement('a');
-  link.href = 'ExtraLounge-POS.apk';
-  link.download = 'ExtraLounge-POS.apk';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  // Show confirmation
+  window.location.href = 'ExtraLounge-POS.apk';
   setTimeout(function() {
-    alert('Extra Lounge APK downloading...');
-  }, 500);
+    alert('Extra Lounge APK downloading...\\n\\nAfter download completes:\\n1. Open the APK file (check Downloads folder)\\n2. Tap Install\\n3. If asked, enable Install from unknown sources\\n4. Find Extra Lounge on your home screen!');
+  }, 1000);
 }
 
 // Capture PWA install prompt (kept for browsers that support it)
@@ -1783,7 +1775,7 @@ function renderTopNav() {
       <div class="text-[10px] desktop-only" style="color:var(--muted-foreground)">${state.outletName} · Restaurant POS</div></div></div>
       <div class="flex items-center gap-1.5">
         <a href="#" onclick="downloadMobileApp(event)" class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all hover:brightness-110" style="background:linear-gradient(135deg,#10b981,#059669);color:white;white-space:nowrap" title="Download as Mobile App">
-          📱 <span class="desktop-only">Download App</span>
+          📱 Download App
         </a>
         ${pc>0?`<span class="px-1.5 py-0.5 rounded-full text-[10px] mobile-only" style="border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);background:color-mix(in srgb,var(--amber-500) 10%,transparent);color:var(--amber-300)">${pc}</span><span class="px-2 py-0.5 rounded-full text-[10px] desktop-only" style="border:1px solid color-mix(in srgb,var(--amber-500) 40%,transparent);background:color-mix(in srgb,var(--amber-500) 10%,transparent);color:var(--amber-300)">🔔 ${pc} preparing</span>`:""}
         ${rc>0?`<span class="px-1.5 py-0.5 rounded-full text-[10px] mobile-only" style="border:1px solid color-mix(in srgb,#10b981 40%,transparent);background:color-mix(in srgb,#10b981 10%,transparent);color:#6ee7b7">${rc}</span><span class="px-2 py-0.5 rounded-full text-[10px] desktop-only" style="border:1px solid color-mix(in srgb,#10b981 40%,transparent);background:color-mix(in srgb,#10b981 10%,transparent);color:#6ee7b7">${rc} ready</span>`:""}
