@@ -1816,6 +1816,7 @@ function renderView() {
 
 // ============ POS VIEW ============
 let quickPayOrderId = null;
+let holdBillsOpen = false;
 let quickPayMethod = "cash";
 let quickPayTendered = "";
 
@@ -1863,16 +1864,32 @@ function renderPos() {
   const quickPayInsufficient = quickPayMethod === "cash" && quickPayOrder && Number(quickPayTendered || 0) < quickPayOrder.total;
 
   let pendingHtml = "";
-  if (pendingPayments.length > 0) {
-    pendingHtml = `<div class="pending-strip" style="padding:3px 8px;background:color-mix(in srgb,var(--amber-500) 8%,transparent);border-bottom:1px solid color-mix(in srgb,var(--amber-500) 25%,transparent);flex-shrink:0;line-height:1">
-      <div style="display:flex;gap:4px;overflow-x:auto;padding:2px 0" class="no-scrollbar">
-        ${pendingPayments.map(o => `
-          <div style="flex-shrink:0;padding:2px 8px;border-radius:4px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap" onclick="quickPayOrder('${o.id}')">
-            <span style="font-size:10px;font-weight:700">#${o.token}</span>
-            <span style="font-size:10px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
-            <span style="font-size:9px;color:var(--amber-500)">💳</span>
+
+  // Hold Bills dialog — shows pending bills inside a modal
+  let holdBillsHtml = "";
+  if (holdBillsOpen) {
+    holdBillsHtml = `<div class="dialog-overlay" onclick="if(event.target===this){holdBillsOpen=false;render()}">
+      <div class="dialog-box" style="max-width:24rem;max-height:80vh;overflow-y:auto" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold">⏸ Hold Bills (${pendingPayments.length})</h3>
+          <button onclick="holdBillsOpen=false;render()" class="text-xl leading-none" style="color:var(--muted-foreground)">&times;</button>
+        </div>
+        ${pendingPayments.length === 0 ? `<p class="text-center text-sm py-6" style="color:var(--muted-foreground)">No pending bills. All caught up! 🎉</p>` :
+          `<div class="space-y-2">
+            ${pendingPayments.map(o => `
+              <div style="padding:8px 10px;border-radius:8px;background:var(--card);border:1px solid color-mix(in srgb,var(--border) 50%,transparent);cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="holdBillsOpen=false;quickPayOrder('${o.id}')">
+                <div>
+                  <div style="font-size:12px;font-weight:700">#${o.token} · ${o.items.length} items</div>
+                  <div style="font-size:10px;color:var(--muted-foreground)">${o.number}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:14px;font-weight:700;color:var(--amber-300)">${fmtMoney(o.total)}</span>
+                  <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--amber-500);color:var(--amber-950);font-weight:600">💳 Pay</span>
+                </div>
+              </div>
+            `).join("")}
           </div>
-        `).join("")}
+        `}
       </div>
     </div>`;
   }
@@ -1926,7 +1943,7 @@ function renderPos() {
     </div>`;
   }
 
-  let html = `${getExpiryBannerHtml()}${pendingHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-9.75rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
+  let html = `${getExpiryBannerHtml()}${holdBillsHtml}${quickPayHtml}<div class="${IS_MOBILE ? 'mobile-pos-wrap flex flex-col' : 'grid h-[calc(100vh-9.75rem)] grid-cols-1 lg:grid-cols-[minmax(0,1fr)_22rem]'}">
     <section class="flex flex-col min-h-0 border-r" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
       <div class="flex items-center gap-2 p-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <input type="search" placeholder="Search product…" value="${searchQuery}" oninput="searchQuery=this.value;render();document.querySelector('input[type=search]').focus()" class="flex-1 rounded-md px-3 py-2 text-sm outline-none" style="background:var(--input);border:1px solid color-mix(in srgb,var(--border) 60%,transparent);color:var(--foreground)"/>
@@ -1957,7 +1974,7 @@ function renderPos() {
       <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <button onclick="clearCart()" class="text-sm hover:text-red-400" style="color:var(--muted-foreground)">✕ Clear</button>
         <div class="text-center"><div class="text-sm font-semibold"># Token ${String(state.tokenCounter).padStart(3,"0")}</div><div class="text-[11px]" style="color:var(--muted-foreground)">New Order</div></div>
-        <button onclick="holdCart()" class="text-sm hover:text-amber-300" style="color:var(--muted-foreground)">⏸ Hold</button>
+        <button onclick="holdBillsOpen=true;render()" class="text-sm hover:text-amber-300" style="color:${pendingPayments.length > 0 ? 'var(--amber-300)' : 'var(--muted-foreground)'};font-weight:${pendingPayments.length > 0 ? '700' : '400'}">⏸ Hold Bills${pendingPayments.length > 0 ? ` (${pendingPayments.length})` : ''}</button>
       </div>
       <div class="grid grid-cols-2 gap-2 px-3 py-2 border-b" style="border-color:color-mix(in srgb,var(--border) 40%,transparent)">
         <select onchange="state.cart.customerName=this.value;saveState()" class="h-9 text-xs rounded px-2" style="background:var(--input);color:var(--foreground)">${CUSTOMERS.map(c=>`<option ${state.cart.customerName===c.name?"selected":""}>${c.name}</option>`).join("")}</select>
@@ -2055,7 +2072,7 @@ ${IS_MOBILE ? `
               <div class="flex justify-between pt-1.5 border-t" style="border-color:var(--border)"><span class="text-sm font-semibold">Total</span><span class="text-base font-bold tabular-nums" style="color:var(--amber-300)">${fmtMoney(totals.total)}</span></div>
             </div>
             <div class="grid grid-cols-3 gap-1 pt-1">
-              <button onclick="holdCart()" class="border rounded-lg py-2.5 text-xs font-medium" style="border-color:var(--border);color:var(--muted-foreground)">⏸ Hold</button>
+              <button onclick="holdBillsOpen=true;render()" class="border rounded-lg py-2.5 text-xs font-medium" style="border-color:${pendingPayments.length > 0 ? 'color-mix(in srgb,var(--amber-500) 50%,transparent)' : 'var(--border)'};color:${pendingPayments.length > 0 ? 'var(--amber-300)' : 'var(--muted-foreground)'}">⏸ Hold${pendingPayments.length > 0 ? ` (${pendingPayments.length})` : ''}</button>
               <button onclick="previewCurrentCart()" class="border rounded-lg py-2.5 text-xs font-medium" style="border-color:color-mix(in srgb,var(--amber-500) 40%,transparent);color:var(--amber-300);background:color-mix(in srgb,var(--amber-500) 5%,transparent)">👁 Preview</button>
               <button onclick="sendToKitchen()" class="font-semibold rounded-lg py-2.5 text-sm" style="background:var(--amber-500);color:var(--amber-950)">➤ Send Kitchen</button>
             </div>
